@@ -8,3 +8,5 @@ For the code to run the following packages are needed:
 2. pygadgetreadeer (Download from https://bitbucket.org/rthompson/pygadgetreader/overview)
 
 3. hdf5
+
+My Bachelor's thesis in which the code is described in detail will be uploaded soon.
