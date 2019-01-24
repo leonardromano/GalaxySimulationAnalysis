@@ -7,11 +7,11 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-import distributions as dist
-import rotationCurves as rC
-import utility.densityProfiles as dP
-import utility.Txts as Txt
-from utility.vectors import *
+import utility.distributions as dist
+import utility.rotationCurves as rC
+import utility.miscellaneous.densityProfiles as dP
+import utility.miscellaneous.Txts as Txt
+from utility.miscellaneous.vectors import *
 
 def plotDataPointsFromURL(url, label):
     "plots the data from the URL"
@@ -86,33 +86,39 @@ def createFit(fitInformation, domain, inc):
         y = np.log10(nfw)
         return [x, y]
         
-def rotCurve(xyPositions, xyVelocities, rMax, dr, particleType, color):
+def rotCurve(xyPositions, xyVelocities, rMax, dr, particleType, color, \
+             massAverage = False, mass = None, saveText = False):
     "creates rotation curve from particles velocity Data"
     radialDomain = np.arange(0., rMax, dr)
     vphi = azimuthalArray(xyVelocities, \
                           azimuthalUnitVectors(radialUnitVectors(xyPositions)))
     velocities = np.zeros(radialDomain.shape[0])
     
-    N = np.zeros(radialDomain.shape[0])
+    M = np.zeros(radialDomain.shape[0])
     
     i=0
     for particle in xyPositions:
-        n = int(round(np.linalg.norm(particle)/dr)) 
+        n = int(round(np.linalg.norm(particle)/dr))
         if n < int(rMax/dr):
-            velocities[n] += vphi[i]
-            N[n] += 1.
+            if massAverage == False:
+                velocities[n] += vphi[i]
+                M[n] +=1.
+            else:
+                m = mass[i]
+                velocities[n] += m*vphi[i]
+                M[n] += m
         i+=1
         
     i=0
-    for n in N:
-        if n!=0:
-            velocities[i]*=1./n
+    for m in M:
+        if m!=0:
+            velocities[i]*=1./m
         i+=1
-    nsun = int(round(8.122/dr))
-    print "v(" + str((nsun-1)*dr) +" kpc) = " + str(velocities[nsun-1]) + "km/s \n" + \
-    "v(" + str(nsun*dr) +" kpc) = " + str(velocities[nsun]) + "km/s \n" + \
-    "v(" + str((nsun+1)*dr) +" kpc) = " + str(velocities[nsun+1]) + "km/s \n"
-    Txt.createTxt(radialDomain, velocities, "rotCurve_" + particleType)
+    
+    if saveText == True:
+        Txt.createTxt(radialDomain, velocities, \
+                      "PlotData/rotCurve_" + particleType)
+        
     (xArray, velArray) = getHistogramm(radialDomain, velocities, dr)
     plt.plot(xArray, velArray, color = 'C'+ str(color), label = particleType)
     
@@ -134,22 +140,32 @@ def domain(distribution):
     xmax = distribution[[-1],[0]]
     return [xmin,xmax]
 
-def plotVelocities(velocityDistributions, labels, fits = list()):
+def plotVelocities(velocityDistributions, labels, fits = list(), \
+                   saveImages = False, Isolated = False):
     "plots velocity distributions"
     v = np.arange(0., 650., 1.)
-    mw = (4./(220.*math.sqrt(math.pi))) * (v/220.)**2 *np.exp(-(v/220.)**2)
+    if Isolated == True:
+        vc = 150.
+        label = "IC"
+    else:
+        vc = 220.
+        label = "SHM" 
+    mw = (4./(vc*math.sqrt(math.pi))) * (v/vc)**2 *np.exp(-(v/vc)**2)
     for i in range(6):
         if i == 0:
             plotData(velocityDistributions[i], labels[i], color = 'C0')
             try:
                 fit = createFit(fits[i], domain(velocityDistributions[i]), 1.)
-                plt.plot(fit[0],fit[1], label = 'fit', color = 'C1')
+                plt.plot(fit[0],fit[1], label = label, color = 'C1')
             except IndexError:
                 print "There is no fit available."
-            plt.plot(v, mw, label = 'SHM', linestyle = 'dashed', color = 'black')
+            plt.plot(v, mw, label = label, linestyle = 'dashed', color = 'black')
             plt.legend()
             plt.xlabel('v [km/s]')
             plt.ylabel(r'f(v) [$(km/s)^{-1}$]')
+            if saveImages == True:
+                filename = "Images/DM_speedDistribution.png"
+                plt.savefig(filename)
             plt.show()
         else:
             plotData(velocityDistributions[i], labels[i], color = 'C0')
@@ -161,14 +177,20 @@ def plotVelocities(velocityDistributions, labels, fits = list()):
             plt.legend()
             plt.xlabel('v [km/s]')
             plt.ylabel(r'f(v) [$(km/s)^{-1}$]')
+            if saveImages == True:
+                filename = "Images/DM_velocityDistribution_" + str(i) + ".png"
+                plt.savefig(filename)
             plt.show()
 
-def main_dist(positions, velocities, interval, fits):
+def main_dist(positions, velocities, interval, fits, \
+              saveImages = False, saveText = False, Isolated = False):
     "Does the thing"
-    distros = dist.createVelocityHistograms(positions, velocities, interval)
-    plotVelocities(distros, ['speed', 'radial', 'azimuthal', 'x', 'y', 'z'], fits)
-
-def main_rC(snapObject, rMax, dr):
+    distros = dist.createVelocityHistograms(positions, velocities, \
+                                            interval, saveText = saveText)
+    plotVelocities(distros, ['speed', 'radial', 'azimuthal', 'x', 'y', 'z'], \
+                   fits, saveImages, Isolated = Isolated)
+    
+def main_rC(snapObject, rMax, dr, saveImages = False):
     "Does the thing with rotation Curves"
     rC_data = rC.createCombinedRotationCurve(snapObject, rMax, dr)
     i = -1
@@ -189,11 +211,14 @@ def main_rC(snapObject, rMax, dr):
     plt.legend()
     plt.ylabel(r'$v_{rot}$ [km/s]')
     plt.xlabel('R [kpc]')
+    if saveImages == True:
+        filename = "Images/RotationCurve_fromMassDistribution.png"
+        plt.savefig(filename)
     plt.show()
     
-def plotOnlyEffectiveRotationCurve(snapObject, rMax, dr):
+def plotOnlyEffectiveRotationCurve(snapObject, rMax, dr, saveText = False):
     "Does the thing with rotation Curves"
-    eff = rC.createOnlyEffectiveCurve(snapObject, rMax, dr)
+    eff = rC.createOnlyEffectiveCurve(snapObject, rMax, dr, saveText = saveText)
     plt.plot(eff[:,0], eff[:,1], color = 'black', label = 'Combined mass')
 
 def plotNFWRotationCurve(rMax, dr, rS, rhoS):
@@ -205,11 +230,11 @@ def main_dP(snapObject, bounds, dlogr, \
             fitNFW, NFWParameters, \
             fitDMDensityProfile, DMDensityFits, DMDensityFitDomains, unit, \
             plotLocalDensity = False, localDensity = (0., 0.), \
-            plotOverDensity = False):
+            plotOverDensity = False, saveImages = False, saveText = False):
     "Plots the the log(rho)-log(R) density Profile"
     densityArray = dP.createDensityProfileHistogramm \
     (snapObject.dmMasses, normarray(snapObject.dmPositions), \
-     bounds[0], bounds[1], dlogr, unit)
+     bounds[0], bounds[1], dlogr, unit, saveText = saveText)
     plt.plot(densityArray[:,0], densityArray[:,1], label = 'density Profile')
     if fitNFW == True:
         NFWFit = createFit([[NFWParameters[0], NFWParameters[1]],'NFW'], \
@@ -239,4 +264,8 @@ def main_dP(snapObject, bounds, dlogr, \
     plt.legend()
     plt.xlabel(r'$log_{10}\left(R \left[kpc\right]\right)$')
     plt.ylabel(dP.getYLabel(unit))
-    plt.show
+    if saveImages == True:
+        filename = "Images/DM_DensityProfile.png"
+        plt.savefig(filename)
+    plt.show()
+    plt.close()
