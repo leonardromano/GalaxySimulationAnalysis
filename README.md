@@ -9,4 +9,4 @@ For the code to run the following packages are needed:
 
 3. hdf5
 
-My Bachelor's thesis in which the code is described in detail will be uploaded soon.
+A detailled description can be found in my Bachelor's thesis, which is also available here.
