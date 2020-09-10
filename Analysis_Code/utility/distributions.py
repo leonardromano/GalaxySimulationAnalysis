@@ -29,7 +29,7 @@ def fillBin(bins, data_array, interval, symmetric = False):
         return bins
     else:
         for dataPoint in data_array:
-            bins[int(round(dataPoint/interval))+bins.shape[0]/2] += [0,1. ,1.]
+            bins[int(round(dataPoint/interval))+bins.shape[0]//2] += [0,1. ,1.]
         for e in bins:
             e[2] = np.sqrt(e[2])
         return bins
