@@ -3,9 +3,9 @@ Python 2 code that helps analysing the simulation data(only hdf5) of galaxy simu
 
 For the code to run the following packages are needed:
 
-1. yt (Download from http://yt-project.org/doc/about/index.html)
+1. yt (Download from http://yt-project.org/doc/about/index.html) (version 3.6 or numPy older than 1.6)
 
-2. pygadgetreadeer (Download from https://bitbucket.org/rthompson/pygadgetreader/overview)
+2. pygadgetreader (Download from https://bitbucket.org/rthompson/pygadgetreader/overview)
 
 3. hdf5
 
