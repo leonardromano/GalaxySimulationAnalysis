@@ -5,9 +5,10 @@ Analysis code by Leonard Romano
 """
 
 from pygadgetreader import *
-from miscellaneous.vectors import *
 import numpy as np
 import yt
+
+from Analysis_Code.utility.miscellaneous.vectors import *
 
 class Snap:
     "A class to contain all useful information contained in the snap"
@@ -15,6 +16,7 @@ class Snap:
         "initializes the Snap object"
         
         ds = yt.load(snap)
+        print("finished loading and printed headers")
         ad = ds.all_data()
         ds.define_unit("M_halo", (1.0e10, "Msun"))
         
@@ -52,9 +54,9 @@ class Snap:
         self.bndry = yt.YTArray([])
         
         self.h = readheader(snap, 'h')
-        print "h = " + str(self.h)
+        print("h = " + str(self.h))
         self.z = readheader(snap, 'redshift')
-        print "z = " + str(self.z)
+        print("z = " + str(self.z))
         
         if npArray == False:
             typeList = ['PartType0', 'PartType1', 'PartType2', \
@@ -76,25 +78,25 @@ class Snap:
                             (np.asarray(ad['PartType0', 'Temperature']), \
                              particleType, 'Temperature')
                         except ZeroDivisionError:
-                            print "There is no Temperature information"
+                            print("There is no Temperature information")
                         try:
                             self.setVariable \
                             (np.asarray(ad['PartType0', 'Density']), \
                              particleType, 'Density')
                         except ZeroDivisionError:
-                            print "There is no Density information"
+                            print("There is no Density information")
                         try:
                             self.setVariable \
                             (np.asarray(ad['PartType0', 'SmoothingLength']), \
                              particleType, 'SmoothingLength')
                         except ZeroDivisionError:
-                            print "There is no SPH information"
+                            print("There is no SPH information")
                     self.updateCombinedData(pT)
-                    print "successfully loading " + \
+                    print("successfully loading " + \
                     str(eval('self.' + pT + 'Positions.size')) + \
-                    ' particles from '+ particleType
+                    ' particles from '+ particleType)
                 except:
-                    print "There are no " + particleType + "-particles!"
+                    print("There are no " + particleType + "-particles!")
         else:
             typeList = ['gas', 'dm', 'disk', \
                         'bulge', 'star']
@@ -113,25 +115,25 @@ class Snap:
                             (np.asarray(ad['PartType0', 'Temperature']), \
                              particleType, 'Temperature')
                         except ZeroDivisionError:
-                            print "There is no Temperature information"
+                            print("There is no Temperature information")
                         try:
                             self.setVariable \
                             (readsnap(snap, 'rho', particleType), \
                              particleType, 'rho')
                         except ZeroDivisionError:
-                            print "There is no density information"
+                            print("There is no density information")
                         try:
                             self.setVariable \
                             (readsnap(snap, 'hsml', particleType), \
                              particleType, 'hsml')
                         except ZeroDivisionError:
-                            print "There is no SPH information"
+                            print("There is no SPH information")
                     self.updateCombinedData(particleType)
-                    print "successfully loading " + \
+                    print("successfully loading " + \
                     str(eval('self.' + particleType + 'Positions.size')) + \
-                    ' particles from '+ particleType
+                    ' particles from '+ particleType)
                 except SystemExit:
-                    print "There are no " + particleType + "-particles!"
+                    print("There are no " + particleType + "-particles!")
             
             
     def setVariable(self, value, particleType, variableName, \
@@ -263,7 +265,7 @@ class Snap:
         "updates the combined data, list"
         if particleType == 'gas' and self.gasTemperatures.size != 0:
             self.setVariable \
-            (get6DList([self.gasMasses, \
+            (getNDList([self.gasMasses, \
                         self.gasPositions, \
                         self.gasVelocities, \
                         self.gasDensity,
@@ -272,7 +274,7 @@ class Snap:
         ), particleType, particleType)
         elif particleType == 'gas':
             self.setVariable \
-            (get5DList([self.gasMasses, \
+            (getNDList([self.gasMasses, \
                         self.gasPositions, \
                         self.gasVelocities, \
                         self.gasDensity,
@@ -280,7 +282,7 @@ class Snap:
         ), particleType, particleType)
         else:
             self.setVariable \
-            (get3DList([eval('self.' + particleType + 'Masses'), \
+            (getNDList([eval('self.' + particleType + 'Masses'), \
                         eval('self.' + particleType + 'Positions'), \
                         eval('self.' + particleType + 'Velocities')]), \
                         particleType, particleType)
@@ -327,14 +329,12 @@ def reduceSnapToGalaxy(data, CM, radius, npArray = False):
                 variableList.append('SmoothingLength')
             else:
                 tempArrays = seperateList3D(temp, npArray)
-            i=0
-            for variableType in variableList:
-                data.setVariable(tempArrays[i], particleType, variableType)
-                i += 1
+            for i in range(len(variableList)):
+                data.setVariable(tempArrays[i], particleType, variableList[i])
             data.updateCombinedData(particleType)
         except AttributeError:
-            print "there are no " + particleType + "-particles!"
-    print "finished reducing the snap to Galaxy!"
+            print("there are no " + particleType + "-particles!")
+    print("finished reducing the snap to Galaxy!")
     
 def alignToNewCS(snap, zDirection, npArray = False):
     "aligns the data along a CS with z-axis parallel to angular momentum"
@@ -352,9 +352,9 @@ def alignToNewCS(snap, zDirection, npArray = False):
                 snap.setVariable(np.asarray(Pos), particleType, 'Coordinates')
                 snap.setVariable(np.asarray(Vel), particleType, 'Velocities')
             snap.updateCombinedData(particleType)
-            print "finished rotating all the " + particleType + '-particles!'
+            print("finished rotating all the " + particleType + '-particles!')
         except AttributeError:
-            print "there are no " + particleType + "-particles!"
+            print("there are no " + particleType + "-particles!")
             
 def MpcTokpc(snapObject):
     "Converts the position data in snapObject from Mpc to kpc"
@@ -368,10 +368,10 @@ def MpcTokpc(snapObject):
                     snapObject.setVariable(snapObject.gasSmoothingLength*10**3, \
                                            particleType, 'SmoothingLength')
                 except AttributeError:
-                    print "There is no SPH information!"
+                    print("There is no SPH information!")
             snapObject.updateCombinedData(particleType)
         except AttributeError:
-            print "there are no " + particleType + "-particles!"
+            print("there are no " + particleType + "-particles!")
     
 def kpcToMpc(snapObject):
     "Converts the position data in snapObject from Mpc to kpc"
@@ -385,10 +385,10 @@ def kpcToMpc(snapObject):
                     snapObject.setVariable(snapObject.gasSmoothingLength*10**(-3), \
                                            particleType, 'SmoothingLength')
                 except AttributeError:
-                    print "There is no SPH information!"
+                    print("There is no SPH information!")
             snapObject.updateCombinedData(particleType)
         except AttributeError:
-            print "there are no " + particleType + "-particles!"
+            print("there are no " + particleType + "-particles!")
 
 def calculateAngularMomentum(snap, pTufCoAM = ['gas', 'star'], \
                              densityWeighted = False):
@@ -397,22 +397,21 @@ def calculateAngularMomentum(snap, pTufCoAM = ['gas', 'star'], \
     L =  np.array([0. , 0. , 0.])
     if densityWeighted == True:
         try:
-            i=0
-            for pos in snap.gasPositions:
+            for i in range(snap.gasPositions.shape[0]):
                 rho = snap.gasDensity[i]
-                L += snap.gasMasses[i]*rho*np.cross(np.asarray(pos), \
-                                   np.asarray(snap.gasVelocities[i]))
+                L += snap.gasMasses[i]*rho*\
+                    np.cross(np.asarray(snap.gasPositions[i]), \
+                             np.asarray(snap.gasVelocities[i]))
                 N += rho
-                i+=1
             if N != 0:
                 L /= N
-                print "Angular Momentum: " + str(L)
+                print("Angular Momentum: " + str(L))
                 return L
             else:
-                print "There are no gas-particles in this region!"
+                print("There are no gas-particles in this region!")
                 return L
         except AttributeError:
-            print "There are no gas-particles!"
+            print("There are no gas-particles!")
     else:
         for pT in pTufCoAM:
             try:
@@ -424,13 +423,13 @@ def calculateAngularMomentum(snap, pTufCoAM = ['gas', 'star'], \
                     N += 1
                     i += 1
             except AttributeError:
-                print "There are no " + pT + "-particles!"
+                print("There are no " + pT + "-particles!")
         if N == 0:
-            print "there are no particles in this region!"
+            print("there are no particles in this region!")
             return np.asarray([0., 0., 0.])
         else:
             L /= N
-            print "Angular Momentum: " + str(L)
+            print("Angular Momentum: " + str(L))
             return L
 
 def alignToAxis(particle, x, y, z):
@@ -461,36 +460,32 @@ def PositionOfDensestGasParticle(snapObject, particleTypes = ['star']):
                 M+=m
                 i += 1
         except AttributeError:
-            print "There are no " + pT + "-particles!"
+            print("There are no " + pT + "-particles!")
     gas_positions = snapObject.gasPositions
     density = snapObject.gasDensity
     if M!= 0:
         R*=1./M
     else:
         R = np.array([0., 0., 0.])
-    i=0
     maxdens = 0
     K = 0
     KIsZero = True
-    for rho in density:
-        r = gas_positions[i]
-        if np.linalg.norm(r-R)<=1.:
-            if rho>maxdens:
-                maxdens = rho
-                K = r
+    for i in range(density.size):
+        if np.linalg.norm(gas_positions[i]-R)<=1.:
+            if density[i]>maxdens:
+                maxdens = density[i]
+                K = gas_positions[i]
                 KIsZero = False
-        i+=1
     if KIsZero == True:
         return R
     else:
         return K
-            
 
 def alignToHighestDensityGas(snapObject, npArray = False, PTCCM = ['star']):
     "Shifts everything to the coordinate System centered around the densest \
     central gas particle"
     R = PositionOfDensestGasParticle(snapObject, particleTypes = PTCCM)
-    print "position of densest gas particle: " + str(R)
+    print("position of densest gas particle: " + str(R))
     for particleType in ['dm', 'star', 'disk', 'bulge', 'gas', 'bndry']:
         try:
             vectors = list()
@@ -505,7 +500,7 @@ def alignToHighestDensityGas(snapObject, npArray = False, PTCCM = ['star']):
                                        particleType, 'Coordinates')
             snapObject.updateCombinedData(particleType)
         except AttributeError:
-            print "There are no " + particleType + "-particles!"
+            print("There are no " + particleType + "-particles!")
 
 def subtractCMWeighted(snapObject, attribute, npArray = False, onlyStar = False):
     "subtracts the velocity/position of the center of mass from \
@@ -526,7 +521,7 @@ def subtractCMWeighted(snapObject, attribute, npArray = False, onlyStar = False)
                                        particleType, attribute)
             snapObject.updateCombinedData(particleType)
         except AttributeError:
-            print "There are no " + particleType + "-particles!"
+            print("There are no " + particleType + "-particles!")
 
 def getCMWeighted(snapObject, attribute, npArray = False, onlyStar = False):
     "calculates the center of mass velocity of the snap"
@@ -543,7 +538,7 @@ def getCMWeighted(snapObject, attribute, npArray = False, onlyStar = False):
                     M += m
                     i += 1
             except AttributeError:
-                print "There are no " + particleType + "-particles!"
+                print("There are no " + particleType + "-particles!")
     else:
         try:
             i=0
@@ -553,20 +548,18 @@ def getCMWeighted(snapObject, attribute, npArray = False, onlyStar = False):
                 M += m
                 i += 1
         except AttributeError:
-            print "There are no " + particleType + "-particles!"
+            print("There are no " + particleType + "-particles!")
     if npArray == False:
         unit = getUnit(attribute)
     
         if M!=0:
             result = yt.YTArray(V*(1./M), unit)
-            print result
             return result
         else:
             return yt.YTArray([0., 0., 0.,], unit)
     else:
         if M!=0:
             result = V*(1./M)
-            print result
             return result
         else:
             return np.array([0., 0., 0.,])
@@ -592,8 +585,8 @@ def transformToCenterSystem(snapObject, center):
             snapObject.setVariable(np.asarray(temp), particleType, 'Coordinates')
             snapObject.updateCombinedData(particleType)
         except AttributeError:
-            print "There are no " + particleType + "-particles!"
-    print "finished transforming to the center System!"
+            print("There are no " + particleType + "-particles!")
+    print("finished transforming to the center System!")
     
 def diskCut(snapObject, diskHeight, npArray = False):
     "reduces the data to disk"
@@ -621,13 +614,13 @@ def diskCut(snapObject, diskHeight, npArray = False):
                 i += 1
             snapObject.updateCombinedData(particleType)
         except AttributeError:
-            print "there are no " + particleType + "-particles!"
+            print("there are no " + particleType + "-particles!")
 
 def reduceToColdGas(snapObject, Tmax, npArray = False):
     "reduces the data to cold Gas only"
     try:
         if snapObject.gasTemperatures.size!=0:
-            print 'reducing the gas to particles below ' + str(Tmax) + ' K...'
+            print('reducing the gas to particles below ' + str(Tmax) + ' K...')
             temp = list()
             for particle in snapObject.gas:
                 if particle[5] < Tmax:
@@ -640,10 +633,10 @@ def reduceToColdGas(snapObject, Tmax, npArray = False):
                 snapObject.setVariable(tempArrays[i], 'gas', variableType)
                 i += 1
             snapObject.updateCombinedData('gas')
-            print 'finished reducing to Cold Gas!'
-            print 'There are ' + str(snapObject.gasPositions.size) + \
-            ' gas-particles left'
+            print('finished reducing to Cold Gas!')
+            print('There are ' + str(snapObject.gasPositions.shape[0]) + \
+            ' gas-particles left')
         else:
-            print 'There is no Temperature information!'
+            print('There is no Temperature information!')
     except AttributeError:
-        print "there are no gas-particles!"
+        print("there are no gas-particles!")

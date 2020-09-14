@@ -5,48 +5,55 @@ Analysis code by Leonard Romano
 """
 
 import numpy as np
+from Analysis_Code.utility.miscellaneous.vectors import *
 
 cvak = 299792458.0
 qe = 1.6021766208*10**(-19)
 pc = 30856775814913700.0
 Msun = 1.98892*10**30
 
-def getXYArray(XArray, YArray):
-    "Turns two (n,1) Arrays of into one combined (n,2) array"
-    i = 0
-    liste = list()
-    for X in XArray:
-        liste.append([X, YArray[i]])
-        i+=1
-    return np.asarray(liste)
-
 def createDensityProfileHistogramm(masses, radii, logrmin, logrmax, dlogr, \
-                                   unit, saveText = False):
+                                   unit, fitDP = True, saveText = False):
     "Returns density profile from mass and position data"
     logR = np.arange(logrmin, logrmax, dlogr)
-    Radii = np.exp(np.log(10)*logR)
-    length = Radii.shape[0]
+    Radii = 10**logR
     density = list()
+    if fitDP == True:
+        errors = list()
     xValues = list()
-    for i in range(length-1):
-        j=0
+    for i in range(Radii.shape[0]-1):
         M=0
-        for radius in radii:
-            if Radii[i] <= radius < Radii[i+1]:
+        for j in range(radii.size):
+            if Radii[i] <= radii[j] < Radii[i+1]:
                 M+=masses[j]
-            j+=1
         rho = getDensity(M, Radii[i], Radii[i+1], unit)
         density.append(rho)
-        xValues.append(np.log10(Radii[i]))
+        xValues.append(Radii[i])
         density.append(rho)
-        xValues.append(np.log10(Radii[i+1]))
+        xValues.append(Radii[i+1])
+        if fitDP == True:
+            try:
+                #implicitly assumes that all DM particles have the same mass
+                srho = rho*np.sqrt(masses[0]/M)
+            except ZeroDivisionError:
+                srho = 10**10
+            errors.append(srho)
+            errors.append(srho)
     densityArray = np.asarray(density)
     radiusArray = np.asarray(xValues)
-    logrho = np.log10(densityArray)
-    if saveText == True:
-        np.savetxt('PlotData/densityProfile', \
-                   getXYArray(np.exp(radiusArray*np.log(10)), densityArray), delimiter = ' ')
-    return getXYArray(radiusArray, logrho)
+    if fitDP == True:
+        errorArray = np.asarray(errors)
+        if saveText == True:
+            np.savetxt('PlotData/densityProfile', \
+                       getNDArray([radiusArray, densityArray, errorArray]), \
+                           delimiter = ' ')
+        return radiusArray, densityArray, errorArray
+    else:
+        if saveText == True:
+            np.savetxt('PlotData/densityProfile', \
+                       getNDArray([radiusArray, densityArray]), \
+                           delimiter = ' ')
+        return radiusArray, densityArray
     
 
 def getDensity(mass, rmin, rmax, unit):
@@ -86,9 +93,9 @@ def getNFWMasses(radii, mS):
 def getYLabel(unit):
     "returns the ylabel of the units used"
     if unit == "Msun":
-        return r'$log_{10}\left(\rho \left[M_{\odot}pc^{-3}\right]\right)$'
+        return r'$\rho \left[M_{\odot}pc^{-3}\right]$'
     elif unit == 'GeV':
-        return r'$log_{10}\left(\rho \left[GeVcm^{-3}\right]\right)$'
+        return r'$\rho \left[GeVcm^{-3}\right]$'
     else:
         return 'A.U.'
     

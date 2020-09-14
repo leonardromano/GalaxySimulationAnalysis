@@ -5,7 +5,7 @@ Analysis code by Leonard Romano
 """
 
 from Analysis_Code.UserInterface import main
-from numpy import array
+from numpy import array, inf
 
 """ Just get all the information you need from the snap using main."""
 
@@ -57,7 +57,7 @@ haloCatalog = 'path-of-file.0.h5'
 haloParameters = ((1., 10**3), 5., array([0., 0., 0.]), \
                   array([50., 50., 50.]), 'Mpc')
 useNumpyArrays = True
-onlyDiskParticles = True
+onlyDiskParticles = False
 diskHeight = 1.
 onlyColdGas = True
 Tmax = 10**(4.0)
@@ -66,50 +66,70 @@ Tmax = 10**(4.0)
 If you want to create DM velocity distributions set 
 makeDMVelocityDistributions to True
 The parameters are the following: (binsize [km/s], fits)
-fits is a list of the fit parameters for each plot (|v|, vr, vphi, vx, vy, vz)
-the fit parameters are of the form [[parameters], 'type of fit']
-So far there are 5 types of fits:
- 1. 'genMax' (generalised Maxwellian): [v0, alpha]
- 2. 'gauss': [m, hwhm]
- 3. 'constant': [c]
- 4. 'linear' : [m, y0]
- 5. 'NFW' : [log10(rs), log10(rhos)]
+fits is a list of the names of the fitting functions 
+for each plot (|v|, vr, vphi, vx, vy, vz)
+the available fitting functions can be modified in the file functions.py
+Useful functions for the velocity distribution are:
+ 1. 'GeneralizedMaxwellian'
+ 2. 'Maxwellian' (performed anyways for speed distribution for comparison)
+ 3. 'Gaussian'
 """
-makeDMVelocityDistributions = False
-fits = list()
+makeDMVelocityDistributions = True
+fits = [["GeneralizedMaxwellian", ([50, 0],[1000, 10])], \
+        ["Gaussian",([-500, 1000],[500, inf])], \
+        ["Gaussian",([-500, 1000],[500, inf])], \
+        ["Gaussian",([-500, 1000],[500, inf])], \
+        ["Gaussian",([-500, 1000],[500, inf])], \
+        ["Gaussian",([-500, 1000],[500, inf])]]
 velocityDistributionParameters = (10., fits)
 
-
+"""
+If you want to plot the DM density profile set makeDMDensityProfile to True
+The parameters are (bounds(logr[kpc]), binsize(log[kpc]), density unit)
+density unit can be 'Msun'(Msun/kpc³) or 'GeV' (GeV/cm³)
+There are also some options:
+    - includeDPFit = True fits the profile with the specified fitting function
+    - DPShapes: list of fit shapes and bounds for parameters used for fit 
+                (see functions.py so far available are "NFW" and "Burkert")
+    - includeLocalDensity = True plots a horizontal bar at
+    - localDensity = (localDensity, error)
+    - includeOverdensity = True plots a horizontal line at the height 
+        of the overdensity
+"""
+makeDMDensityProfile = True
+DMDensityProfileParameters = ([0., 2.0], 0.015, 'GeV')
+includeDPFit = True
+DPShapes = [["NFW", ([0, 0],[10, 50])],["Burkert", ([0, 0],[10, 50])]]
+includeLocalDensity = True
+localDensity = (0.30, 0.03)
+includeOverdensity = False
 
 """
 If you want to create a rotation curve set makeRotationCurve to True
-The parameters are the following: (rmax[kpc], binsize[kpc], particleTypes)
-particlesTypes has the following form ['gas', 'star', 'disk', 'bulge', 'dm']
-(of course the exact types can vary)
+The parameters are the following: (rmax[kpc], binsize[kpc])
 There are also some options:
     - fromMassDistribution = True makes a plot of only the rotation curve 
         as predicted by the mass distribution
+    - RCparticleTypes: has the following form ['gas', 'star', 'disk', 'bulge', 'dm']
+                       (of course the exact types can be choosen)
+                       specifies the particle types whose rotation curves 
+                       are displayed
     - massAverage = True calculates the rotational velocity as mass weighted 
         average for each bin (as opposed to just numerical average)
     - addObservationalData = True adds the observational data points stored 
         in a txt file which is pointed at with 
     - URL = 'path-of-file.txt'
-    - plotNFW = True plots the rotation curve predicted by only a NFW profile
-        in the same picture
-    - rotNFWparameters = (rS, rhoS)
-        are the parameters for the NFW plot
     - compareToMassDistribution = True plots the rotation curve as predicted 
         by the mass distribution in the same picture
 """
-makeRotationCurve = False
-rotationCurveParameters = (25., 0.2, ['gas', 'star'])
+makeRotationCurve = True
+rotationCurveParameters = (25., 0.2)
 fromMassDistribution = False
+RCparticleTypes = ['gas', 'star']
 massAverage = True
 addObservationalData = True
 URL = 'path-of-file.txt'
-plotNFW = False
-rotNFWParameters = (20., 0.6)
-compareToMassDistribution = False
+compareToMassDistribution = True
 
 
 
@@ -120,37 +140,8 @@ testMilkyWaylikeness to True
 """
 testMilkyWaylikeness = False
 
-
 """
-If you want to plot the DM density profile set makeDMDensityProfile to True
-The parameters are (bounds(logr[kpc]), binsize(log[kpc]), density unit)
-density unit can be 'Msun'(Msun/kpc³) or 'GeV' (GeV/cm³)
-There are also some options:
-    - includeNFWFit = True plots a NFW profile with the parameters
-    - NFWParameters = (log10(rs), log10(rhos))
-    - includeLocalDensity = True plots a horizontal bar at
-    - localDensity = (localDensity, error)
-    - includeOverdensity = True plots a horizontal line at the height 
-        of the overdensity
-    - includeDensityFit = True plots a fitted profile with the parameters
-    - DMDensityFitParameters = [[parameters], type of fit] 
-        (see velocity Distributions for more information)
-    - DMDensityFitDomains = [bounds(fit0), bound(fit1),...]
-"""
-makeDMDensityProfile = False
-DMDensityProfileParameters = ([0, 2.0], 0.01, 'GeV')
-includeNFWFit = True
-NFWParameters = (1.3, -2.5)
-includeLocalDensity = True
-localDensity = (0.30, 0.03)
-includeOverdensity = True
-includeDensityFit = False
-DMDensityFitParameters = [[[0.], 'constant'], \
-                          [[0., 0.], 'linear']]
-DMDensityFitDomains = [[0, 0.6], [0.6, 2.0]]
-
-"""
-If you want to plot the SPH smoothing length against the gas density for \
+If you want to plot the SPH smoothing length against the gas density for 
 each particle set smoothingLengthVSDensity = True
 """
 smoothingLengthVSDensity = False
@@ -174,8 +165,8 @@ The parameters are the following:
 The algorithm calculates the average value for each binsize and then averages 
 over all obtained values
 """
-getLocalDMDensity = True
-getLocalRotationalVelocity = True
+getLocalDMDensity = False
+getLocalRotationalVelocity = False
 localValueParameters = (8.122, 0.05, 20, 0.05)
 
 
@@ -190,20 +181,16 @@ main(snap, \
      reduceToColdGas = onlyColdGas, Tmax = Tmax, \
      doDist = makeDMVelocityDistributions, \
      distParameters = velocityDistributionParameters, \
-     doRotCurve = makeRotationCurve, rcPar = rotationCurveParameters, \
-     fromMassDist = fromMassDistribution, massAverage = massAverage, \
-     addObsData = addObservationalData, url = URL, \
-     compareToNFW = plotNFW, rNFWPar = rotNFWParameters, \
-     compareToMassDist = compareToMassDistribution, \
-     testMW = testMilkyWaylikeness, \
      doDMDensityProfile = makeDMDensityProfile, \
      dpParameters = DMDensityProfileParameters, \
-     fitNFW = includeNFWFit, NFWParameters = NFWParameters , \
+     fitDP = includeDPFit, DPShapes = DPShapes , \
      plotLocalDensity = includeLocalDensity, localDensity = localDensity, \
      plotOverDensity = includeOverdensity, \
-     fitDMDensityProfile = includeDensityFit, \
-     DMDensityFits = DMDensityFitParameters, \
-     DMDensityFitDomains = DMDensityFitDomains, \
+     doRotCurve = makeRotationCurve, rcPar = rotationCurveParameters, \
+     fromMassDist = fromMassDistribution, RCparticleTypes = RCparticleTypes, \
+     massAverage = massAverage, addObsData = addObservationalData, url = URL, \
+     compareToMassDist = compareToMassDistribution, \
+     testMW = testMilkyWaylikeness, \
      doSmoothingLengthPlot = smoothingLengthVSDensity, \
      doProjectionPlots = makeProjectionPlots, \
      ppPar = projectionPlotParameters, \

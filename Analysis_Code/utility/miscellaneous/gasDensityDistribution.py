@@ -5,6 +5,7 @@ Analysis code by Kazunori Okamoto, translated into python by Leonard Romano
 """
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 mp = 1.672621637*10**(-24)
 
@@ -18,11 +19,9 @@ def W(r, h):
     elif 1.<a:
         return 0.
 
-def densityDistribution(data, ppPar = (100, 15.)):
+def densityDistribution(data, binNumber = 100, rmax = 15.):
     """calculates the column density including the smoothing length
     for gas particles"""
-    binNumber = ppPar[0]
-    rmax = ppPar[1]
     rho_3d = np.zeros((binNumber,binNumber,binNumber))
     w_3d = np.zeros((binNumber,binNumber,binNumber))
     rho_xz = np.zeros((binNumber,binNumber))
@@ -32,7 +31,7 @@ def densityDistribution(data, ppPar = (100, 15.)):
     mass = data.gasMasses
     density = data.gasDensity
     
-    print "calculating spatial density...\n"
+    print("calculating spatial density...\n")
     
     dr = 2.0*rmax/binNumber
     l = 0
@@ -95,40 +94,33 @@ def densityDistribution(data, ppPar = (100, 15.)):
         for j in range(binNumber):
             for k in range(binNumber):
                 rho_xy[j,i] += rho_3d[i,j,k] * dr
-    print "finished calculating the spatial density!\n"
+    print("finished calculating the spatial density!\n")
     return rho_xz, rho_xy
 
-def smoothColumnDensityPlot(data, ppPar = (100, 15., "inferno"), saveImages = False):
+def makePlot(X, Y, data, cmap, mode, saveImages):
+    "Makes a colormesh plot and optionally saves it"
+    plt.pcolormesh(X, Y, data, cmap = cmap, \
+                   norm = LogNorm(), shading = 'gouraud')
+    plt.colorbar(label='column gas mass density')
+    plt.title("Density distribution of gas (" +mode+")")
+    plt.xlabel("X [kpc]")
+    if mode == "edge on":
+        plt.ylabel("Z [kpc]")
+    else:
+        plt.ylabel("Y [kpc]")
+    if saveImages == True:
+        filename = "Images/columndensity_"+ mode +".png"
+        plt.savefig(filename)
+    plt.show()
+    plt.close()
+
+def smoothColumnDensityPlot(data, binNumber = 100, rmax = 15., \
+                            cmap = "inferno", saveImages = False):
     "Makes a Column Density plot including smoothing length"
-    densities = densityDistribution(data, ppPar)
-    binNumber = ppPar[0]
-    rmax = ppPar[1]
-    logdensity_xz = np.log10(densities[0])
-    logdensity_xy = np.log10(densities[1])
+    density_xz, density_xy = densityDistribution(data, binNumber, rmax)
     XX = np.linspace(-rmax, rmax, binNumber)
     YY = np.linspace(-rmax, rmax, binNumber)
-
     X,Y = np.meshgrid(XX,YY)
-    plt.pcolor(X, Y, logdensity_xy, cmap = ppPar[2])
-    plt.colorbar(label='log column gas mass density')
-    plt.title("Density distribution of gas (face on)")
-    plt.xlabel("X [kpc]")
-    plt.ylabel("Y [kpc]")
-    if saveImages == True:
-        filename = "Images/columndensity_xy.png"
-        plt.savefig(filename)
-    plt.show()
-    plt.close()
-
-    X,Y = np.meshgrid(XX,YY)
-    plt.pcolor(X, Y, logdensity_xz, cmap = ppPar[2])
-    plt.colorbar(label='log column gas mass density')
-    plt.title("Density distribution of gas (edge on)")
-    plt.xlabel("X [kpc]")
-    plt.ylabel("Z [kpc]")
-    if saveImages == True:
-        filename = "Images/columndensity_xz.png"
-        plt.savefig(filename)
-    plt.show()
-    plt.close()
+    makePlot(X,Y, density_xy, cmap, "face on", saveImages)
+    makePlot(X,Y, density_xz, cmap, "edge on", saveImages)
     

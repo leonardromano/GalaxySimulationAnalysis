@@ -6,9 +6,9 @@ Analysis code by Leonard Romano
 
 import yt
 import numpy as np
-from pygadgetreader import *
-import utility.snapClass as sC
-from utility.miscellaneous.vectors import *
+
+import Analysis_Code.utility.snapClass as sC
+from Analysis_Code.utility.miscellaneous.vectors import getNDArray
 
 
 def initialiseHalos(haloCatalogue, z, h):
@@ -22,15 +22,15 @@ def initialiseHalos(haloCatalogue, z, h):
     positions_x = ad["halos", "particle_position_x"].in_units('kpc')*(1.+z)*h
     positions_y = ad["halos", "particle_position_y"].in_units('kpc')*(1.+z)*h
     positions_z = ad["halos", "particle_position_z"].in_units('kpc')*(1.+z)*h
-    positions = get3DArray([positions_x, positions_y, positions_z])
+    positions = getNDArray([positions_x, positions_y, positions_z])
     return [np.asarray(IDs), np.asarray(masses), np.asarray(radii), positions]
 
 def distanceFromPoint(array, point):
     "calculates the distance from a point for all points in an array"
-    temp = list()
-    for element in array:
-        temp.append(np.linalg.norm(point-element))
-    return np.asarray(temp)
+    distances = np.zeros(array.shape[0])
+    for i in range(array.shape[0]):
+        distances[i] += np.linalg.norm(point-array[i])
+    return distances
 
 def transformToCMSystem(positions, CM):
     "translates the position vectors in the CM system"
@@ -39,17 +39,14 @@ def transformToCMSystem(positions, CM):
         temp.append(point-CM)
     return np.asarray(temp)
 
-def getHaloDataList(haloData, lowerLeft, upperRight):
+def getHaloDataList(haloData, center):
     "takes all the halo Data and writes it into a big List"
-    center = 0.5*(lowerLeft + upperRight)
     positions = transformToCMSystem(haloData[3], center)
     distances = distanceFromPoint(positions, np.array([0., 0., 0.]))
-    i=0
     DataArray = list()
-    for ID in haloData[0]:
-        DataArray.append([ID, haloData[1][i], haloData[2][i], \
+    for i in range(haloData[0].size):
+        DataArray.append([haloData[0][i], haloData[1][i], haloData[2][i], \
                       positions[i], distances[i]])
-        i+=1
     return DataArray
 
 def reduceToInnerRadius(haloDataList, rMax):
@@ -74,7 +71,8 @@ def getLargestGalaxy(HaloDataList):
     for halo in HaloDataList:
         if halo[1] > largest[1]:
             largest = halo
-    print "The most massive halo has a mass of " + str(largest[1]) + r" [10^10 Msun]"
+    print("The most massive halo has a mass of " + str(largest[1]) \
+          + r" [10^10 Msun]")
     return largest
 
 def zoomIn(data, halo, ignoreH = False, npArray = False, \
@@ -87,28 +85,27 @@ def zoomIn(data, halo, ignoreH = False, npArray = False, \
         CM = yt.YTArray(halo[3], 'kpc')
     else:
         CM = halo[3]
-    print "Center of Galaxy: " + str(CM) + " [Mpc]"
-    print "Virial Radius: " + str(radius) + " [Mpc]"
+    print("Center of Galaxy: " + str(CM) + " [Mpc]")
+    print("Virial Radius: " + str(radius) + " [Mpc]")
     sC.reduceSnapToGalaxy(data, CM, radius, npArray = npArray)
-    print "There are " + str(data.starPositions.size) + " star particles left!"
-    print "There are " + str(data.dmPositions.size) + " dm particles left!"
-    print "There are " + str(data.gasPositions.size) + " gas particles left!"
+    print("There are " + str(data.starPositions.shape[0]) + " star particles left!")
+    print("There are " + str(data.dmPositions.shape[0]) + " dm particles left!")
+    print("There are " + str(data.gasPositions.shape[0]) + " gas particles left!")
     if reduceToColdGas == True:
         sC.reduceToColdGas(data, Tmax, npArray = npArray)
     if lengthUnit == 'Mpc':
         sC.MpcTokpc(data)
     sC.subtractCMWeighted(data, 'Velocities', npArray = npArray)
     sC.alignToHighestDensityGas(data, npArray = npArray, PTCCM = PTCCM)
-    sC.alignToNewCS(data, \
-                        sC.calculateAngularMomentum \
-                        (data, PTCAM, densityWeighted = dWAM), \
+    sC.alignToNewCS(data,  sC.calculateAngularMomentum \
+                    (data, PTCAM, densityWeighted = dWAM), \
                         npArray = npArray)
     if onlyDisk == True:
         sC.diskCut(data, diskHeight, npArray = npArray)
-        print "successfully reduced gas to disk! There are " \
-        + str(data.gasPositions.size) + ' gas particles left!'
-        print "successfully reduced stars to disk! There are " \
-        + str(data.starPositions.size) + ' star particles left!'
+        print("successfully reduced gas to disk! There are " \
+        + str(data.gasPositions.shape[0]) + ' gas particles left!')
+        print("successfully reduced stars to disk! There are " \
+        + str(data.starPositions.shape[0]) + ' star particles left!')
     return data
 
 def testRoutine(snap, npArray = True, PTCAM = ['gas', 'star'], \
@@ -116,13 +113,13 @@ def testRoutine(snap, npArray = True, PTCAM = ['gas', 'star'], \
                 lengthUnit = 'Mpc', dWAM = False):
     "Test getHaloFromGalactic Size"
     data = sC.Snap(snap, npArray = npArray)
-    print "finished loading the data!"
+    print("finished loading the data!")
     z = np.random.rand(3,)
-    print z
+    print(z)
     sC.alignToNewCS(data, z, npArray = npArray)
     sC.kpcToMpc(data)
     sC.transformToCenterSystem(data, np.asarray([-25.,-25., -25.]))
-    print "finished aligning to new CS!"
+    print("finished aligning to new CS!")
     halo = [0, 130.169979174, 0.5, np.array([25., 25., 25.]), 0.]
     return zoomIn(data, halo, npArray = npArray, \
                   PTCAM = PTCAM, PTCCM = PTCCM, onlyDisk = onlyDisk, \
@@ -135,7 +132,7 @@ def getHaloFromGalacticSize(snap, haloCatalogue, hPar, npArray = False, \
                             dWAM = False):
     "gets Data of the most massive Halo in the halo Catalogue"
     data = sC.Snap(snap, npArray = npArray)
-    print "finished loading the data!"
+    print("finished loading the data!")
     if npArray == False:
         center = yt.YTArray(0.5*(hPar[2]+hPar[3]), 'kpc')
     else:
@@ -146,7 +143,7 @@ def getHaloFromGalacticSize(snap, haloCatalogue, hPar, npArray = False, \
      (reduceToInnerRadius \
       (getHaloDataList \
        (initialiseHalos\
-        (haloCatalogue, data.z, data.h), hPar[2], hPar[3]), hPar[1]), \
+        (haloCatalogue, data.z, data.h), center), hPar[1]), \
        hPar[0]))
     return zoomIn(data, halo, npArray = npArray, \
                   PTCAM = PTCAM, PTCCM = PTCCM, onlyDisk = onlyDisk, \

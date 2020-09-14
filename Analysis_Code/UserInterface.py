@@ -3,15 +3,18 @@
 """
 Analysis code by Leonard Romano
 """
-import utility.snapClass as sC
-import plotting as iPlt
-import utility.miscellaneous.MWtest as MW
-from utility.miscellaneous.vectors import *
-import matplotlib.pyplot as plt
-import HaloFinding as HF
+
 import numpy as np
-import utility.miscellaneous.LocalValues as LV
-import utility.miscellaneous.gasDensityDistribution as gDD
+import matplotlib.pyplot as plt
+
+import Analysis_Code.utility.snapClass as sC
+import Analysis_Code.plotting as iPlt
+import Analysis_Code.utility.miscellaneous.MWtest as MW
+from Analysis_Code.utility.miscellaneous.vectors import *
+import Analysis_Code.HaloFinding as HF
+import Analysis_Code.utility.miscellaneous.LocalValues as LV
+import Analysis_Code.utility.miscellaneous.gasDensityDistribution as gDD
+import Analysis_Code.utility.miscellaneous.SmoothingLength as SL
 
 def main(snap, \
          fromGalacticSnap = False, fromHaloCatalogue = True, \
@@ -22,16 +25,13 @@ def main(snap, \
          PTCCM = ['star'], onlyDisk = False, diskHeight = np.inf, \
          reduceToColdGas = False, Tmax = np.inf, \
          doDist = False , distParameters = (10., list()), \
-         doRotCurve = False, rcPar = (100., 0.8, list()),\
-         fromMassDist = True, massAverage = False, \
-         addObsData = False, url = '', \
-         compareToNFW = False, rNFWPar = (20.55, 0.008), \
-         compareToMassDist = False, testMW = False, \
          doDMDensityProfile = False, dpParameters = ([0., 2.], 0.02, 'Msun'), \
-         fitNFW = False, NFWParameters = (0.6, -1.2), plotLocalDensity = False, \
+         fitDP = False, DPShapes = ["NFW"], plotLocalDensity = False, \
          localDensity = (0., 0.), plotOverDensity = False, \
-         fitDMDensityProfile = False, DMDensityFits = list(), \
-         DMDensityFitDomains = [[0.,1.], [1.,2.]], \
+         doRotCurve = False, rcPar = (100., 0.8),\
+         fromMassDist = True, RCparticleTypes = list(), massAverage = False, \
+         addObsData = False, url = '', \
+         compareToMassDist = False, testMW = False, \
          doSmoothingLengthPlot = False, doProjectionPlots = False,  \
          ppPar = (100, 15., "inferno"), \
          getLocalDens = False, getLocalVrot = False, \
@@ -39,7 +39,7 @@ def main(snap, \
          saveText = False, \
          testRoutine = False \
          ):
-    "I do what you want me to do if specified"
+    "Does whatever is specified"
     if fromGalacticSnap == True:
         if fromHaloCatalogue == True:
             data = HF.getHaloFromGalacticSize(snap, haloCatalogue, hPar, \
@@ -51,7 +51,7 @@ def main(snap, \
                                               Tmax = Tmax, dWAM = dWAM)
         else:
             data = sC.Snap(snap, npArray = npArray)
-            print "finished loading the data!"
+            print("finished loading the data!")
             data = HF.zoomIn(data, [0,0, haloCoords[1], haloCoords[0]], \
                              npArray = npArray, PTCAM = PTCAM, PTCCM = PTCCM,\
                              onlyDisk = onlyDisk, diskHeight = diskHeight, \
@@ -67,120 +67,78 @@ def main(snap, \
         data = sC.Snap(snap, npArray = npArray)
         sC.alignToHighestDensityGas(data, npArray = npArray, PTCCM = PTCCM)
         sC.subtractCMWeighted(data, 'Velocities', npArray = npArray)
-        sC.alignToNewCS(data, \
-                          sC.calculateAngularMomentum \
-                          (data, PTCAM, densityWeighted = dWAM), \
-                          npArray = npArray)
+        sC.alignToNewCS(data, sC.calculateAngularMomentum\
+                        (data, PTCAM, densityWeighted = dWAM), \
+                            npArray = npArray)
     try:
         if doDist == True:
             Isolated = not fromGalacticSnap
             iPlt.main_dist(data.dmPositions, data.dmVelocities, \
-                           distParameters[0], distParameters[1], \
-                           saveImages = saveImages, saveText = saveText, \
-                           Isolated = Isolated)
+                           *distParameters, saveImages = saveImages, \
+                            saveText = saveText, Isolated = Isolated)
     except AttributeError:
-        print "There are no DM-particles!"
+        print("There are no DM-particles!")
+    
+    if doDMDensityProfile == True:
+        iPlt.main_dP(data, *dpParameters, fitDP, DPShapes, \
+                     plotLocalDensity = plotLocalDensity, \
+                     localDensity = localDensity, \
+                     plotOverDensity = plotOverDensity, \
+                     saveImages = saveImages, saveText = saveText)
             
     if doRotCurve == True:
         if fromMassDist == True:
-            iPlt.main_rC(data, rcPar[0], rcPar[1], \
-                         saveImages = saveImages)
+            iPlt.main_rC(data, *rcPar, saveImages = saveImages)
         else:
-            i=0
-            for pT in rcPar[2]:
-                iPlt.rotCurve(xyArray(eval("data." + pT + 'Positions')), \
-                              xyArray(eval("data." + pT + 'Velocities')), \
-                              rcPar[0], rcPar[1], pT, i, \
+            for i in range(len(RCparticleTypes)):
+                iPlt.rotCurve(xyArray(eval("data." + RCparticleTypes[i] + 'Positions')), \
+                              xyArray(eval("data." + RCparticleTypes[i] + 'Velocities')), \
+                              *rcPar, RCparticleTypes[i], i, \
                               massAverage = massAverage, \
-                              mass = eval("data." + pT + 'Masses'), \
+                              mass = eval("data." + RCparticleTypes[i] + 'Masses'), \
                               saveText = saveText)
-                i += 1
             
             if addObsData == True:
                 iPlt.plotDataPointsFromURL(url, label = "Eilers et al.")
-            
-            if compareToNFW == True:
-                iPlt.plotNFWRotationCurve(rcPar[0], rcPar[1], \
-                                          rNFWPar[0], rNFWPar[1])                
+                
             if compareToMassDist == True:
-                iPlt.plotOnlyEffectiveRotationCurve(data, rcPar[0], rcPar[1], \
-                                                    saveText = saveText)
+                iPlt.plotOnlyEffectiveRotationCurve(data, *rcPar, saveText = saveText)
             plt.legend()
             plt.ylabel(r'$v_{rot}$ [km/s]')
             plt.xlabel('R [kpc]')
             if saveImages == True:
                 filename = "Images/RotationCurve.png"
                 plt.savefig(filename)
-            plt.show()            
+            plt.show()
+            plt.close()
         
     if testMW == True:
         MW.MWlike_arrayInput(data, saveText = saveText)
         
-    if doDMDensityProfile == True:
-        iPlt.main_dP(data, dpParameters[0], dpParameters[1], \
-                     fitNFW, NFWParameters, \
-                     fitDMDensityProfile, DMDensityFits, \
-                     DMDensityFitDomains, dpParameters[2], \
-                     plotLocalDensity = plotLocalDensity, \
-                     localDensity = localDensity, \
-                     plotOverDensity = plotOverDensity, \
-                     saveImages = saveImages, saveText = saveText)
-        
     if doSmoothingLengthPlot == True:
-        if fromGalacticSnap == True:
-            x = np.log10(data.gasDensity) - 8.
-        else:
-            x = np.log10(data.gasDensity) + 1.
-        y = np.log10(data.gasSmoothingLength)
-        plt.scatter(x,y)
-        plt.xlabel(r"log density$[M_\odot\,pc^{-3}]$")
-        plt.ylabel(r"log $h_{sml}[kpc]$")
-        if saveImages == True:
-            filename = "Images/SmoothingLengthVSDensity"
-            plt.savefig(filename)
-        plt.show()
+        SL.PlotSmoothingLength(data, fromGalacticSnap, saveImages)
     
     if doProjectionPlots == True:
-        gDD.smoothColumnDensityPlot(data, ppPar, saveImages = saveImages)
+        gDD.smoothColumnDensityPlot(data, *ppPar, saveImages = saveImages)
     
     if getLocalDens == True:
         radii = normarray(data.dmPositions)
-        reducedRadii = list()
-        reducedMasses = list()
-        i=0
-        for r in radii:
-            if lvPar[0]-(lvPar[1]+(lvPar[2]-1)*lvPar[3])/2 < r \
-            < lvPar[0]+(lvPar[1]+(lvPar[2]-1)*lvPar[3])/2:
-                reducedRadii.append(r)
-                reducedMasses.append(data.dmMasses[i])
-            i+=1
-        LV.averageOverDifferentBinSizes(np.asarray(reducedRadii), \
-                                        np.asarray(reducedMasses), lvPar, \
+        reducedRadii, reducedMasses = LV.cut([radii, data.dmMasses], *lvPar)
+        LV.averageOverDifferentBinSizes(reducedRadii, reducedMasses, *lvPar, \
                                         "Density", saveText = saveText)
     if getLocalVrot == True:
         for pT in ['gas', 'star', 'disk']:
-            print pT + ':'
+            print(pT + ':')
             x = xyArray(eval("data." + pT + "Positions"))
             v = azimuthalArray(xyArray \
                                 (eval("data." + pT + "Velocities")), \
                                 azimuthalUnitVectors(radialUnitVectors(x)))
             m = eval("data." + pT + "Masses")
             radii = normarray(x)
-            redR = list()
-            redV = list()
-            masses = list()
-            i=0
-            for r in radii:
-                if lvPar[0]-(lvPar[1]+(lvPar[2]-1)*lvPar[3])/2 < r \
-            < lvPar[0]+(lvPar[1]+(lvPar[2]-1)*lvPar[3])/2:
-                    redR.append(r)
-                    redV.append(v[i])
-                    masses.append(m[i])
-                    
-                i+=1
-            LV.averageOverDifferentBinSizes(np.asarray(redR), \
-                                            np.asarray(redV), lvPar, "Vrot", \
+            redR, redV, masses = LV.cut([radii, v, m], *lvPar)
+            LV.averageOverDifferentBinSizes(redR, redV, *lvPar, "Vrot", \
                                             massAverage = massAverage, \
-                                            masses = np.asarray(masses), \
-                                            saveText = saveText, particleType = pT)
+                                            masses = masses, \
+                                                saveText = saveText, \
+                                                    particleType = pT)
             

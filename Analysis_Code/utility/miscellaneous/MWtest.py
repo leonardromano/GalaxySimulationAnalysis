@@ -12,7 +12,7 @@ def totalMass(masses):
             m += mass
         return m
     except:
-        print "An Error occured in MWtest.py -> totalMass"
+        print("An Error occured in MWtest.py -> totalMass")
         return 0
 
 def MWlike_arrayInput(snapObject, saveText):
@@ -24,11 +24,11 @@ def MWlike_arrayInput(snapObject, saveText):
     totalMass(snapObject.bulgeMasses)
     
     Mtot = Mhalo + Mgas + Mstellar
-    print "Mgas = " + str(Mgas)
+    print("Mgas = " + str(Mgas))
     if 50<Mhalo<10**4 and 4.5<Mstellar<8.3:
-        print "Mhalo = " + str(Mhalo) + " and Mstellar = " + \
-        str(Mstellar) + "\n so the galaxy is MW-like!"
-        print "total Mass = " + str(Mtot)
+        print("Mhalo = " + str(Mhalo) + " and Mstellar = " + \
+        str(Mstellar) + "\n so the galaxy is MW-like!")
+        print("total Mass = " + str(Mtot))
         if saveText == True:
             text_file = open("PlotData/MWLike.txt", "w")
             text_file.write("Mhalo = " + str(Mhalo) + " and Mstellar = " + \
@@ -37,9 +37,9 @@ def MWlike_arrayInput(snapObject, saveText):
             text_file.close()
         return (True, Mhalo, Mstellar, Mgas)
     else:
-        print "Mhalo = " + str(Mhalo) + " and Mstellar = " + \
-        str(Mstellar) + "\n so the galaxy is NOT MW-like!"
-        print "total Mass = " + str(Mtot)
+        print("Mhalo = " + str(Mhalo) + " and Mstellar = " + \
+        str(Mstellar) + "\n so the galaxy is NOT MW-like!")
+        print("total Mass = " + str(Mtot))
         if saveText == True:
             text_file = open("PlotData/MWLike.txt", "w")
             text_file.write("Mhalo = " + str(Mhalo) + " and Mstellar = " + \

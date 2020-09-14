@@ -3,10 +3,10 @@
 """
 Analysis code by Leonard Romano
 """
-import miscellaneous.vectors as vec
 import numpy as np
-import miscellaneous.Txts as Txt
-import miscellaneous.densityProfiles as dP
+
+from Analysis_Code.utility.miscellaneous.vectors import xyArray, normarray
+from Analysis_Code.utility.miscellaneous.vectors import getNDArray
 
 G = 6.674*10**(-11)
 kpc = 30.9*10**18
@@ -16,22 +16,22 @@ def getCombinedArray(massesList, positionsList):
     "reads all sorts of stellar mass and writes them in a single array"
     masses = concat(massesList)
     positions = concat(positionsList)
-    return (masses, positions)
+    return masses, positions
 
 def createRotationCurve(masses, positions, dr, rMax):
     "Creates rotation curve from snap"
-    radial = vec.normarray(vec.xyArray(positions))
+    radial = normarray(xyArray(positions))
     radii = radiusRange(0.1 , 8., rMax, dr)
-    vrot = list()
-    for r in radii:
-        vrot.append([r, np.sqrt(M*G*getInsideMass(masses, radial, r)/ \
-                               (r*kpc))*10**(-3)])
-    return np.asarray(vrot)
+    vrot = np.zeros(radii.size)
+    for i in range(radii.size):
+        vrot[i] += np.sqrt(M*G*getInsideMass(masses, radial, radii[i])/ \
+                               (radii[i]*kpc))*10**(-3)
+    return radii, vrot
 
 def radiusRange(rmin, r0, rmax, dr):
     "divides radius Range in inner and outer region"
     if rmin > rmax:
-        print "rmax < rmin"
+        print("rmax < rmin")
         return radiusRange(rmax,rmin,dr)
     elif rmax < r0:
         return np.arange(rmin, rmax, dr/4)
@@ -58,17 +58,22 @@ def getInsideMass(masses, radial, r):
         i+=1
     return m
 
-def distToHist(distribution, dr):
+def distToHist(radii, velocities, dr):
     "Turns distribution into histogram"
-    a = list()
-    for [r, v] in distribution:
-        if r<8.0:
-            a.append([r, v])
-            a.append([r+dr/4, v])
+    rs = list()
+    vs = list()
+    for i in range(radii.size):
+        if radii[i]<8.0:
+            rs.append(radii[i])
+            vs.append(velocities[i])
+            rs.append(radii[i]+dr/4)
+            vs.append(velocities[i])
         else:
-            a.append([r, v])
-            a.append([r+dr, v])
-    return np.asarray(a)
+            rs.append(radii[i])
+            vs.append(velocities[i])
+            rs.append(radii[i]+dr)
+            vs.append(velocities[i])
+    return np.asarray(rs), np.asarray(vs)
 
 def createCombinedRotationCurve(snapObject, rMax, dr):
     "Creates combined rotation curve"
@@ -80,7 +85,7 @@ def createCombinedRotationCurve(snapObject, rMax, dr):
                       eval('snapObject.' + particleType + 'Positions'), \
                       dr, rMax))
         except AttributeError:
-            print "there are no " + particleType + "-particles!"
+            print("there are no " + particleType + "-particles!")
     try:
         (stellarMasses, stellarPositions) = \
         getCombinedArray \
@@ -95,10 +100,10 @@ def createCombinedRotationCurve(snapObject, rMax, dr):
         C.append(createRotationCurve(combinedMasses, \
                                      combinedPositions, dr, rMax))
     except AttributeError:
-        print "there are no " + particleType + "-particles!"
+        print("there are no " + particleType + "-particles!")
     H = list()
     for dist in C:
-        H.append(distToHist(dist, dr))
+        H.append(distToHist(*dist, dr))
     return H
     
 def createOnlyEffectiveCurve(snapObject, rMax, dr, saveText = False):
@@ -110,20 +115,9 @@ def createOnlyEffectiveCurve(snapObject, rMax, dr, saveText = False):
         (snapObject.starPositions, snapObject.diskPositions, \
          snapObject.bulgePositions, snapObject.dmPositions, \
          snapObject.gasPositions))
-    effective = createRotationCurve(Masses, Positions, dr, rMax)
+    dist = createRotationCurve(Masses, Positions, dr, rMax)
     if saveText == True:
-        Txt.createTxt(effective[:,0], effective[:,1], \
-                      "PlotData/effectiveRotationCurve")
-    return distToHist(effective, dr)
-
-def createNFWRotationCurve(rMax, dr, rS, rhoS):
-    "creates NFWRotationCUrve"
-    radii = radiusRange(0.1 , 8., rMax, dr)
-    masses = dP.getNFWMasses(radii*(1./rS), (4.*np.pi/30.)*rhoS*rS**3)
-    velocities = list()
-    i=0
-    for m in masses:
-        velocities.append([np.sqrt(M*G*m/(radii[i]*kpc))*10**(-3)])
-        i+=1
-    return Txt.ArrayFrom1DArrays(radii, np.asarray(velocities))
+        np.savetxt("PlotData/effectiveRotationCurve", \
+                   getNDArray(dist), delimiter = ' ')
+    return distToHist(*dist, dr)
     

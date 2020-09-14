@@ -7,7 +7,7 @@ import numpy as np
 import yt
 
 def radius(vector):
-    "returns the cylindrical Radius of a vector"
+    "returns the cylindrical radius of a vector"
     return np.sqrt(vector[0]**2 + vector[1]**2)
 
 def maximum(vector):
@@ -16,12 +16,11 @@ def maximum(vector):
 
 def cart2Pol(vectors):
     "converts [x,y] to [phi, r]"
-    liste = list()
+    coords = list()
     for vector in vectors:
-        phi = np.arctan2(vector[1], vector[0])*180/np.pi
-        r = np.linalg.norm(vector)
-        liste.append([phi, r])
-    return np.asarray(liste)
+        coords.append(np.array([np.arctan2(vector[1], vector[0])*180/np.pi, \
+                          np.linalg.norm(vector)]))
+    return np.asarray(coords)
 
 def normalizeVector(vector):
     "divides vector by its norm"
@@ -48,47 +47,43 @@ def radialUnitVectors(xyVectors):
 def normarray(vectors):
     "takes array of vectors and turns it into an array of norms"
     a = list()
-    for i in vectors:
-        a.append(np.linalg.norm(i))
+    for vector in vectors:
+        a.append(np.linalg.norm(vector))
     return np.asarray(a)
 
 def jArray(vectors, j):
     "takes array of vectors and reduces it into an array of its jth-components"
     a = list()
-    for i in vectors:
-        a.append(i[j])
+    for vector in vectors:
+        a.append(vector[j])
     return np.asarray(a)
 
 def xyArray(vectors):
     "takes array of vectors and reduces it into an array of x- and y-components"
     a = list()
-    for i in vectors:
-        a.append([i[0],i[1]])
+    for vector in vectors:
+        a.append([vector[0],vector[1]])
     return np.asarray(a)
 
 def radialArray(xyVelocities, radialUnitVectors):
     "takes array of vectors and reduces it into an array of (ploar)-radial-components"
-    a = list()
-    i = 0
-    for vel in xyVelocities:
-        a.append(np.dot(vel, radialUnitVectors[i]))
-        i+=1
-    return np.asarray(a)
+    a = np.zeros(xyVelocities.shape[0])
+    for i in range(xyVelocities.shape[0]):
+        a[i] += np.dot(xyVelocities[i], radialUnitVectors[i])
+    return a
 
 def azimuthalArray(xyVelocities, azimuthalUnitVectors):
     "takes array of vectors and reduces it into an array of (ploar)-azimuthal-components"
-    a = list()
-    i = 0
-    for vel in xyVelocities:
-        a.append(np.dot(vel, azimuthalUnitVectors[i]))
-        i+=1
-    return np.asarray(a)
+    a = np.zeros(xyVelocities.shape[0])
+    for i in range(xyVelocities.shape[0]):
+        a[i] += np.dot(xyVelocities[i], azimuthalUnitVectors[i])
+    return a
 
 def getRighthandedSystem(zVector):
     "returns righthanded system of unit vectors with ez in direction of zVector"
     if (zVector[0] == 0. and zVector[1] == 0. and zVector[2] == 0.) \
     or zVector.shape != (3,):
-        print "Input was the zero-vector!"
+        print("Input was the zero-vector!")
         return [np.array([1., 0., 0.]), np.array([0., 1., 0.]), np.array([0., 0., 1.])]
     else:
         z = normalizeVector(zVector)
@@ -114,55 +109,20 @@ def getRighthandedSystem(zVector):
             x = normalizeVector(np.array([z[1], -z[0], 0.]))
             y = np.cross(z, x)
             return [x, y, z]
-        
-def get3DArray(D1Arrays):
-    "creates 3D Array from 3 1D Arrays of same length"
-    array = list()
-    i = 0
-    for entry in D1Arrays[0]:
-        array.append([entry, D1Arrays[1][i], D1Arrays[2][i]])
-        i+=1
-    return np.asarray(array)
 
-def get3DList(D1Arrays):
-    "creates 3D List from 3 1D Arrays of same length"
-    array = list()
-    i = 0
-    for entry in D1Arrays[0]:
-        array.append([ entry, D1Arrays[1][i], D1Arrays[2][i] ])
-        i+=1
-    return array
+def getNDList(D1Arrays):
+    "creates ND List from list of N 1D Arrays of same length"
+    a = list()
+    for i in range(D1Arrays[0].size):
+        b = list()
+        for j in range(len(D1Arrays)):
+            b.append(D1Arrays[j][i])
+        a.append(b)
+    return a
 
-def get4DList(D1Arrays):
-    "creates 4D List from 4 1D Arrays of same length"
-    array = list()
-    i = 0
-    for entry in D1Arrays[0]:
-        array.append([ entry, D1Arrays[1][i], \
-                      D1Arrays[2][i], D1Arrays[3][i]])
-        i+=1
-    return array
-
-def get5DList(D1Arrays):
-    "creates 5D List from 5 1D Arrays of same length"
-    array = list()
-    i = 0
-    for entry in D1Arrays[0]:
-        array.append([ entry, D1Arrays[1][i], \
-                      D1Arrays[2][i], D1Arrays[3][i] ,D1Arrays[4][i]])
-        i+=1
-    return array
-
-def get6DList(D1Arrays):
-    "creates 6D List from 6 1D Arrays of same length"
-    array = list()
-    i = 0
-    for entry in D1Arrays[0]:
-        array.append([ entry, D1Arrays[1][i], \
-                      D1Arrays[2][i], D1Arrays[3][i] , \
-                      D1Arrays[4][i], D1Arrays[5][i]])
-        i+=1
-    return array
+def getNDArray(D1Arrays):
+    "creates ND Array from list of N 1D Arrays of same length"
+    return np.asarray(getNDList(D1Arrays))
 
 def seperateList3D(listObject, npArray = False):
     "seperates 3D-list into 3 1D-arrays"
